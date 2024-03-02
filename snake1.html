@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100vh;
+        background-color: lightblue;
+    }
+
+    #game-container {
+        background-color: lightgray;
+        border: 2px solid gray;
+        width: 400px;
+        height: 400px;
+        position: relative;
+    }
+
+    .snake {
+        background-color: red;
+        position: absolute;
+        width: 20px;
+        height: 20px;
+    }
+
+    .food {
+        background-color: black;
+        position: absolute;
+        width: 20px;
+        height: 20px;
+    }
+
+    #score-container {
+        margin-top: 10px;
+        background-color: #333;
+        padding: 10px;
+        border-radius: 5px;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+</style>
+</head>
+<body>
+<div id="game-container"></div>
+<div id="score-container">Score: 0 | Highest Score: <span id="highest-score">0</span></div>
+<button id="start-btn">Start Beginner</button>
+<button id="change-level-btn">Change Level</button>
+<button id="restart-btn" style="display:none;">Restart</button>
+
+<script>
+    const gameContainer = document.getElementById('game-container');
+    const scoreDisplay = document.getElementById('score-container');
+    const highestScoreDisplay = document.getElementById('highest-score');
+    const startBtn = document.getElementById('start-btn');
+    const changeLevelBtn = document.getElementById('change-level-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    const gridSize = 20;
+    const gridWidth = gameContainer.clientWidth / gridSize;
+    const gridHeight = gameContainer.clientHeight / gridSize;
+
+    let snake = [{ x: 10, y: 10 }];
+    let food = { x: 5, y: 5 };
+    let dx = 1;
+    let dy = 0;
+    let score = 0;
+    let highestScore = localStorage.getItem('snakeHighestScore') || 0;
+    highestScoreDisplay.textContent = highestScore;
+    let intervalId;
+    let level = 'beginner';
+
+    const levels = {
+        beginner: 200,
+        intermediate: 150,
+        expert: 100
+    };
+
+    function createFood() {
+        food.x = Math.floor(Math.random() * gridWidth);
+        food.y = Math.floor(Math.random() * gridHeight);
+    }
+
+    function draw() {
+        gameContainer.innerHTML = '';
+
+        snake.forEach(segment => {
+            const snakeElement = document.createElement('div');
+            snakeElement.style.left = `${segment.x * gridSize}px`;
+            snakeElement.style.top = `${segment.y * gridSize}px`;
+            snakeElement.classList.add('snake');
+            gameContainer.appendChild(snakeElement);
+        });
+
+        const foodElement = document.createElement('div');
+        foodElement.style.left = `${food.x * gridSize}px`;
+        foodElement.style.top = `${food.y * gridSize}px`;
+        foodElement.classList.add('food');
+        gameContainer.appendChild(foodElement);
+    }
+
+    function moveSnake() {
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) {
+            createFood();
+            score++;
+            scoreDisplay.textContent = `Score: ${score} | Highest Score: ${highestScore}`;
+            if (score > highestScore) {
+                highestScore = score;
+                localStorage.setItem('snakeHighestScore', highestScore);
+                highestScoreDisplay.textContent = highestScore;
+            }
+        } else {
+            snake.pop();
+        }
+    }
+
+    function handleKeyDown(event) {
+        switch (event.key) {
+            case 'ArrowUp':
+                if (dy !== 1) {
+                    dx = 0;
+                    dy = -1;
+                }
+                break;
+            case 'ArrowDown':
+                if (dy !== -1) {
+                    dx = 0;
+                    dy = 1;
+                }
+                break;
+            case 'ArrowLeft':
+                if (dx !== 1) {
+                    dx = -1;
+                    dy = 0;
+                }
+                break;
+            case 'ArrowRight':
+                if (dx !== -1) {
+                    dx = 1;
+                    dy = 0;
+                }
+                break;
+        }
+    }
+
+    function checkGameOver() {
+        if (snake[0].x < 0 || snake[0].x >= gridWidth || snake[0].y < 0 || snake[0].y >= gridHeight) {
+            clearInterval(intervalId);
+            alert('Game Over! Your score: ' + score);
+            restartBtn.style.display = 'block';
+        }
+        for (let i = 1; i < snake.length; i++) {
+            if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+                clearInterval(intervalId);
+                alert('Game Over! Your score: ' + score);
+                restartBtn.style.display = 'block';
+            }
+        }
+    }
+
+    function startGame() {
+        createFood();
+        intervalId = setInterval(() => {
+            moveSnake();
+            draw();
+            checkGameOver();
+        }, levels[level]);
+        startBtn.style.display = 'none';
+    }
+
+    function restartGame() {
+        snake = [{ x: 10, y: 10 }];
+        dx = 1;
+        dy = 0;
+        score = 0;
+        scoreDisplay.textContent = `Score: ${score} | Highest Score: ${highestScore}`;
+        createFood();
+        restartBtn.style.display = 'none';
+        startGame();
+    }
+
+    function changeLevel() {
+        clearInterval(intervalId);
+        switch (level) {
+            case 'beginner':
+                level = 'intermediate';
+                break;
+            case 'intermediate':
+                level = 'expert';
+                break;
+            case 'expert':
+                level = 'beginner';
+                break;
+        }
+        startBtn.textContent = `Start ${level.charAt(0).toUpperCase() + level.slice(1)}`;
+        startBtn.style.display = 'block';
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', restartGame);
+    changeLevelBtn.addEventListener('click', changeLevel);
+</script>
+</body>
+</html>
